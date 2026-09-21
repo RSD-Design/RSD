@@ -72,3 +72,5 @@ jobs:
           fi
           git commit -m 'Deploy numerology-inspired V7 website'
           git push origin HEAD:main
+
+# retry after deployment chunk validation
