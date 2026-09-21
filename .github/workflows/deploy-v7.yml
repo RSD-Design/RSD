@@ -1,0 +1,74 @@
+name: Deploy Global IT Consultants V7
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-v7.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and validate V7 package
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .deploy/part-* | tr -d '\r\n ' | base64 --decode > /tmp/v7.zip
+          echo 'e5be849626e5f9de6137533c5a96a904c552aef9d62a59e53a5510b16d5666a7  /tmp/v7.zip' | sha256sum -c -
+          rm -rf /tmp/v7
+          mkdir -p /tmp/v7
+          unzip -q /tmp/v7.zip -d /tmp/v7
+          SRC='/tmp/v7/global-it-consultants-numerology-v7'
+          test -f "$SRC/index.html"
+          test -f "$SRC/CNAME"
+          test -f "$SRC/sitemap.xml"
+          test -f "$SRC/robots.txt"
+          test -f "$SRC/assets/service.css"
+          test -f "$SRC/services/business-consulting/index.html"
+          test -f "$SRC/services/administrative-consulting/index.html"
+          test -f "$SRC/services/procurement-consulting/index.html"
+          test -f "$SRC/services/hr-consulting/index.html"
+          test -f "$SRC/services/bidding-consulting/index.html"
+          test -f "$SRC/services/technology-consulting/index.html"
+
+      - name: Install V7 website at Pages root
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC='/tmp/v7/global-it-consultants-numerology-v7'
+          rm -rf assets services .deploy
+          rm -f index.html favicon.svg robots.txt sitemap.xml README.md CNAME .nojekyll styles.css script.js
+          cp "$SRC/index.html" ./index.html
+          cp "$SRC/favicon.svg" ./favicon.svg
+          cp "$SRC/robots.txt" ./robots.txt
+          cp "$SRC/sitemap.xml" ./sitemap.xml
+          cp "$SRC/README.md" ./README.md
+          cp "$SRC/CNAME" ./CNAME
+          cp "$SRC/.nojekyll" ./.nojekyll
+          cp -a "$SRC/assets" ./assets
+          cp -a "$SRC/services" ./services
+          test "$(cat CNAME)" = 'www.globalitconsultants.com'
+
+      - name: Commit V7 website
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No website changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Deploy numerology-inspired V7 website'
+          git push origin HEAD:main
